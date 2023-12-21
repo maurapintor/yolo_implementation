@@ -1,0 +1,23 @@
+venv/
+.DS_Store
+
+*.pyc
+__pycache__/
+
+instance/
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+dist/
+build/
+*.egg-info/
+
+.idea
+
+# this should be created during repo setup
+data
+
+# these are created by training the models
+*.pth.tar
