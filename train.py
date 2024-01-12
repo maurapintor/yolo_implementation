@@ -88,7 +88,7 @@ def main():
             key=lambda x: int(x.split("_")[1]),
         )
         print("model found: ", MAX_MODEL_FILE)
-        load_checkpoint(torch.load(MAX_MODEL_FILE), model, optimizer)
+        load_checkpoint(torch.load(MAX_MODEL_FILE, map_location=DEVICE), model, optimizer)
 
     train_dataset = VOCDataset(
         "data/train.csv",

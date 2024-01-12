@@ -1,13 +1,10 @@
 import os
 import torch
 import torchvision.transforms as transforms
-import torch.optim as optim
 import torchvision.transforms.functional as FT
-from tqdm import tqdm
 from torch.utils.data import DataLoader
 from model import Yolov1
 from dataset import VOCDataset
-import numpy as np
 from utils import (
     non_max_suppression,
     cellboxes_to_boxes,
@@ -50,7 +47,7 @@ def main():
     model = Yolov1(split_size=7, num_boxes=2, num_classes=20).to(DEVICE)
     model.eval()
 
-    load_checkpoint(torch.load(LOAD_MODEL_FILE), model)
+    load_checkpoint(torch.load(LOAD_MODEL_FILE, map_location=DEVICE), model)
 
     test_dataset = VOCDataset(
         "data/test.csv",
