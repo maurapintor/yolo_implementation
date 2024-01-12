@@ -13,12 +13,8 @@ from torch.utils.data import DataLoader
 from model import Yolov1
 from dataset import VOCDataset
 from utils import (
-    non_max_suppression,
     mean_average_precision,
-    intersection_over_union,
-    cellboxes_to_boxes,
     get_bboxes,
-    plot_image,
     save_checkpoint,
     load_checkpoint,
 )
@@ -29,7 +25,7 @@ torch.manual_seed(seed)
 
 # Hyperparameters etc.
 LEARNING_RATE = 2e-5
-DEVICE = torch.device("mps")
+DEVICE = torch.device("cpu")
 BATCH_SIZE = 16  # 64 in original paper but I don't have that much vram, grad accum?
 WEIGHT_DECAY = 0
 EPOCHS = 1000
@@ -89,20 +85,13 @@ def main():
     if LOAD_MODEL:
         MAX_MODEL_FILE = max(
             filter(lambda x: x.endswith("pth"), os.listdir(".")),
-            key=lambda x: int(x.split("_")[1])
-            )
+            key=lambda x: int(x.split("_")[1]),
+        )
         print("model found: ", MAX_MODEL_FILE)
         load_checkpoint(torch.load(MAX_MODEL_FILE), model, optimizer)
 
     train_dataset = VOCDataset(
         "data/train.csv",
-        transform=transform,
-        img_dir=IMG_DIR,
-        label_dir=LABEL_DIR,
-    )
-
-    test_dataset = VOCDataset(
-        "data/test.csv",
         transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
@@ -117,17 +106,7 @@ def main():
         drop_last=True,
     )
 
-    test_loader = DataLoader(
-        dataset=test_dataset,
-        batch_size=BATCH_SIZE,
-        num_workers=NUM_WORKERS,
-        pin_memory=PIN_MEMORY,
-        shuffle=True,
-        drop_last=True,
-    )
-
     for epoch in range(EPOCHS):
-
         pred_boxes, target_boxes = get_bboxes(
             train_loader, model, iou_threshold=0.5, threshold=0.4, device=DEVICE
         )
@@ -138,14 +117,17 @@ def main():
         print(f"Train mAP: {mean_avg_prec}")
 
         if epoch % 5 == 1:
-           checkpoint = {
-               "state_dict": model.state_dict(),
-               "optimizer": optimizer.state_dict(),
-           }
-           save_checkpoint(checkpoint, filename=LOAD_MODEL_FILE.format(epoch=epoch))
-
+            checkpoint = {
+                "state_dict": model.state_dict(),
+                "optimizer": optimizer.state_dict(),
+            }
+            save_checkpoint(checkpoint, filename=LOAD_MODEL_FILE.format(epoch=epoch))
 
         train_fn(train_loader, model, optimizer, loss_fn)
+
+    # saves model at the end
+    MODEL_FILE = "model.pth.tar"
+    save_checkpoint(checkpoint, filename=MODEL_FILE)
 
 
 if __name__ == "__main__":

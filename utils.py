@@ -233,7 +233,6 @@ def plot_image(image, boxes, ax=None):
         ax.add_patch(rect)
 
 
-
 def get_bboxes(
     loader,
     model,

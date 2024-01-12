@@ -10,23 +10,19 @@ from dataset import VOCDataset
 import numpy as np
 from utils import (
     non_max_suppression,
-    mean_average_precision,
-    intersection_over_union,
     cellboxes_to_boxes,
-    get_bboxes,
     plot_image,
     load_checkpoint,
 )
-from torchvision.utils import draw_bounding_boxes
 import matplotlib.pyplot as plt
 
 seed = 8
 torch.manual_seed(seed)
 
 # Hyperparameters etc.
-DEVICE = "mps"
+DEVICE = "cpu"
 BATCH_SIZE = 5
-LOAD_MODEL_FILE = "epoch_{epoch}_.pth.tar"
+LOAD_MODEL_FILE = "model.pth.tar"
 IMG_DIR = "data/images"
 LABEL_DIR = "data/labels"
 
@@ -50,18 +46,11 @@ transform = Compose(
 )
 
 
-
-
 def main():
-
     model = Yolov1(split_size=7, num_boxes=2, num_classes=20).to(DEVICE)
+    model.eval()
 
-    MAX_MODEL_FILE = max(
-        filter(lambda x: x.endswith(".pth.tar"), os.listdir(".")),
-        key=lambda x: int(x.split("_")[1])
-        )
-    print("model found: ", MAX_MODEL_FILE)
-    load_checkpoint(torch.load(MAX_MODEL_FILE), model)
+    load_checkpoint(torch.load(LOAD_MODEL_FILE), model)
 
     test_dataset = VOCDataset(
         "data/test.csv",
@@ -69,7 +58,6 @@ def main():
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
     )
-
 
     test_loader = DataLoader(
         dataset=test_dataset,
@@ -79,33 +67,30 @@ def main():
         drop_last=True,
     )
 
-    for batch_idx, (x, y) in enumerate(test_loader):
+    for _, (x, y) in enumerate(test_loader):
         x, y = x.to(DEVICE), y.to(DEVICE)
         with torch.no_grad():
             out = model(x)
-        
+
         out = cellboxes_to_boxes(out)
         y = cellboxes_to_boxes(y)
-        
-        figure, axes = plt.subplots(figsize=(3*x.shape[0], 6), ncols=x.shape[0], nrows=2)
-        
+
+        figure, axes = plt.subplots(
+            figsize=(3 * x.shape[0], 6), ncols=x.shape[0], nrows=2
+        )
+
         for index, sample in enumerate(x):
             image = FT.to_pil_image(sample)
             pred = non_max_suppression(out[index], iou_threshold=0.4, threshold=0.4)
 
             plot_image(image, y[index], axes[0, index])
             plot_image(image, pred, axes[1, index])
-        
+
         axes[0, 0].set_ylabel("ground_truth")
         axes[1, 0].set_ylabel("prediction")
         figure.tight_layout()
         plt.show()
         break
-
-
-    
-
-
 
 
 if __name__ == "__main__":
